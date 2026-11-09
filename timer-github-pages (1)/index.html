@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="nb" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Sikkerhet: appen får bare snakke med seg selv og med Supabase-prosjektet. Bytter du prosjekt, oppdater connect-src. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://uzshjwtrqcuamxkckaun.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Timer</title>
+<meta name="description" content="Enkel timeføring for verkstedet">
+<meta name="theme-color" content="#F6F2EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191714" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Timer">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#F6F2EA; --surface:#FFFDF9; --surface2:#ECE5D8; --text:#26241F; --muted:#665F55;
+  --line:#DDD4C5; --accent:#A64B27; --accent-ink:#FFFFFF; --accent-soft:#F4E2D7;
+  --danger:#B3261E; --danger-ink:#FFFFFF; --stop:#26241F; --stop-ink:#FFFFFF;
+  --shadow:0 1px 2px rgba(60,40,20,.06),0 4px 14px rgba(60,40,20,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#191714; --surface:#24211D; --surface2:#322D27; --text:#F0EAE0; --muted:#B5AC9E;
+    --line:#3B362F; --accent:#E08A5F; --accent-ink:#1A1410; --accent-soft:#3B2A20;
+    --danger:#E5675C; --danger-ink:#1A0F0E; --stop:#F0EAE0; --stop-ink:#191714;
+    --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191714; --surface:#24211D; --surface2:#322D27; --text:#F0EAE0; --muted:#B5AC9E;
+  --line:#3B362F; --accent:#E08A5F; --accent-ink:#1A1410; --accent-soft:#3B2A20;
+  --danger:#E5675C; --danger-ink:#1A0F0E; --stop:#F0EAE0; --stop-ink:#191714;
+  --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:17px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.ic{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+main{max-width:560px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom))}
+h1{margin:0;font-size:28px;letter-spacing:-.01em}
+h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center}
+.row > .grow{flex:1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+
+.btn{min-height:52px;border-radius:14px;font-size:17px;font-weight:650;padding:0 18px;border:0;background:var(--surface2);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:var(--danger);color:var(--danger-ink)}
+.btn.ghost{background:transparent;border:2px solid var(--line)}
+.btn.wide{width:100%}
+.btn.huge{min-height:84px;font-size:26px;border-radius:20px;width:100%}
+.btn.stop{background:var(--stop);color:var(--stop-ink)}
+.btn:disabled{opacity:.45}
+.iconbtn{width:56px;height:56px;padding:0;border-radius:16px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* segmented */
+.seg{display:flex;background:var(--surface2);border-radius:16px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:48px;border:0;border-radius:12px;background:transparent;font-weight:650;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+
+/* week header */
+.periodhead{display:grid;grid-template-columns:60px 1fr 60px;align-items:center;gap:8px;text-align:center}
+.periodhead .title{font-size:44px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+.periodhead .sub{color:var(--muted);font-size:16px}
+.todaybtn{display:flex;justify-content:center;margin-top:6px}
+.todaybtn .btn{min-height:44px;padding:0 20px;font-size:16px;border-radius:22px}
+
+/* banners */
+.banner{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:var(--accent-soft);color:var(--text)}
+.banner p{margin:0;flex:1;font-size:15px}
+.banner .btn{min-height:48px;font-size:15px;padding:0 14px;background:var(--surface)}
+
+/* timer card */
+.clock{font-size:52px;font-weight:800;text-align:center;letter-spacing:-.02em;line-height:1.1}
+.clocksub{text-align:center;color:var(--muted);margin-bottom:12px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+
+/* summary */
+.sumgrid{display:flex;align-items:center;gap:16px}
+.sumgrid .big{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.ring{flex:none;position:relative;width:92px;height:92px}
+.ring svg{width:92px;height:92px;transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:18px;text-align:center;line-height:1.1}
+.ring .pct small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.bar{display:flex;height:24px;border-radius:12px;overflow:hidden;background:var(--surface2);margin-top:14px;gap:2px}
+.bar span{display:block;height:100%}
+.legend{display:grid;grid-template-columns:1fr;gap:6px 14px;margin:12px 0 0;padding:0;list-style:none;font-size:15px}
+.legend li{display:flex;align-items:center;gap:8px;min-width:0}
+.legend .dot{width:12px;height:12px;border-radius:4px;flex:none}
+.legend .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* days & entries */
+.day{display:flex;flex-direction:column;gap:8px}
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;padding:4px 4px 0}
+.dayhead .d{font-weight:750;font-size:18px}
+.dayhead .s{font-weight:750;font-size:18px}
+.tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:2px 8px;margin-left:8px;vertical-align:2px}
+.swipe{position:relative;overflow:hidden;border-radius:16px;background:var(--danger)}
+.swipe-bg{position:absolute;inset:0;display:flex;justify-content:flex-end;align-items:center;padding-right:22px;color:var(--danger-ink);font-weight:750;gap:8px}
+.swipe-row{position:relative;touch-action:pan-y;transition:transform .18s ease}
+.swipe.armed .swipe-bg{font-size:19px}
+.entry{display:flex;gap:12px;align-items:center;width:100%;min-height:72px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;text-align:left}
+.chipic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;flex:none}
+.entry .mid{flex:1;min-width:0}
+.entry .t1{font-weight:700;font-size:17px}
+.entry .t2{color:var(--muted);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry .dur{font-weight:800;font-size:17px;white-space:nowrap}
+.addday{min-height:48px;border:2px dashed var(--line);background:transparent;border-radius:14px;color:var(--muted);font-weight:650;display:flex;align-items:center;justify-content:center;gap:6px}
+.empty{text-align:center;padding:28px 16px;color:var(--muted)}
+.empty strong{display:block;color:var(--text);font-size:20px;margin-bottom:6px}
+
+/* list rows (month, settings) */
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--surface)}
+.list > *{border:0;border-bottom:1px solid var(--line);background:transparent;min-height:60px;padding:12px 16px;display:flex;align-items:center;gap:12px;text-align:left;width:100%}
+.list > *:last-child{border-bottom:0}
+.list .grow{flex:1;min-width:0}
+.list .val{font-weight:800}
+
+/* forms */
+label.f{display:block;font-weight:700;margin-bottom:6px}
+.inp{width:100%;min-height:56px;border-radius:14px;border:2px solid var(--line);background:var(--surface);padding:10px 14px;font-size:18px}
+.inp:focus{border-color:var(--accent);outline:none}
+textarea.inp{min-height:110px;resize:vertical}
+select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 22px) 50%,calc(100% - 16px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:40px}
+.hint{font-size:14px;color:var(--muted);margin-top:6px}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;transform:translateY(102%);transition:transform .24s ease;visibility:hidden}
+.sheet.open{transform:none;visibility:visible}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid var(--line);max-width:560px;width:100%;margin:0 auto}
+.sheet-head h1{flex:1;font-size:22px;text-align:center}
+.sheet-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.sheet-inner{max-width:560px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:20px}
+.sheet-foot{border-top:1px solid var(--line);background:var(--bg)}
+.sheet-foot .in{max-width:560px;margin:0 auto;display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.sheet-foot .btn{flex:1;min-height:60px;font-size:19px}
+.sheet-foot .btn.danger{flex:0 0 auto}
+
+.times{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.timebox{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.timebox .lbl{font-weight:700;text-align:center;color:var(--muted)}
+.timebox input{width:100%;min-height:64px;border:0;background:transparent;font-size:34px;font-weight:800;text-align:center;padding:0}
+.timebox input::-webkit-calendar-picker-indicator{display:none}
+.timebox .steps{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.timebox .steps .btn{min-height:50px;padding:0;font-size:17px}
+.durline{text-align:center;font-size:30px;font-weight:800}
+.durline small{display:block;font-size:14px;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:48px;min-width:56px;border-radius:24px;border:2px solid var(--line);background:var(--surface);padding:0 16px;font-weight:650}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.labelgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.labelbtn{--c:#888;min-height:62px;border-radius:16px;border:2px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 12%,var(--surface));display:flex;align-items:center;gap:10px;padding:8px 10px;text-align:left;font-weight:650;font-size:16px;line-height:1.2}
+.labelbtn .chipic{width:38px;height:38px;border-radius:11px;background:var(--c)}
+.labelbtn[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.labelbtn[aria-pressed="true"] .chipic{background:rgba(255,255,255,.22)}
+.err{color:var(--danger);font-weight:700;margin-top:8px}
+
+/* swatches & icons pickers */
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.swatches button{aspect-ratio:1;min-height:48px;border-radius:14px;border:3px solid transparent}
+.swatches button[aria-pressed="true"]{border-color:var(--text);box-shadow:inset 0 0 0 3px var(--bg)}
+.icongrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.icongrid button{aspect-ratio:1;min-height:48px;border-radius:14px;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.icongrid button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* notes */
+.note{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-height:72px}
+.note .t{font-weight:750;font-size:18px;display:flex;gap:8px;align-items:center}
+.note .t svg{color:var(--accent);width:20px;height:20px}
+.note .p{color:var(--muted);font-size:15px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note .m{color:var(--muted);font-size:13px;margin-top:6px}
+.prog{display:inline-block;font-size:13px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text);margin-left:6px}
+.checks{display:flex;flex-direction:column;gap:8px}
+.check{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px}
+.check .box{width:52px;height:52px;border-radius:12px;border:0;background:transparent;display:grid;place-items:center;flex:none}
+.check .box span{width:30px;height:30px;border-radius:8px;border:2.5px solid var(--muted);display:grid;place-items:center}
+.check.done .box span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.check input{flex:1;min-width:0;border:0;background:transparent;font-size:18px;min-height:52px;padding:0 4px}
+.check.done input{text-decoration:line-through;color:var(--muted)}
+.check .rm{width:48px;height:48px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;flex:none}
+.pinbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs button{min-height:68px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:14px;font-weight:650;color:var(--muted)}
+nav.tabs button svg{width:26px;height:26px}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+nav.tabs .run{position:relative}
+nav.tabs .run::after{content:"";position:absolute;top:12px;left:calc(50% + 10px);width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
+
+/* toast & modal */
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:60;background:var(--stop);color:var(--stop-ink);border-radius:16px;padding:6px 6px 6px 18px;display:flex;align-items:center;gap:12px;min-height:56px;max-width:calc(100% - 32px);width:max-content;transition:.2s;font-weight:600}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{min-height:46px;border:0;border-radius:12px;padding:0 16px;background:var(--accent);color:var(--accent-ink);font-weight:800}
+.toast:not(:has(button)){padding-right:18px}
+.modal{position:fixed;inset:0;z-index:70;background:rgba(20,15,10,.45);display:none;align-items:flex-end;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal .box{background:var(--bg);border-radius:22px;padding:20px;width:100%;max-width:520px;margin-bottom:env(safe-area-inset-bottom)}
+.modal p{margin:0 0 16px;font-size:18px}
+.modal .row .btn{flex:1;min-height:58px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app" aria-live="off"></main>
+
+<nav class="tabs" aria-label="Hovedmeny">
+  <div class="in">
+    <button data-act="tab" data-tab="timer" aria-current="page"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Timer</button>
+    <button data-act="tab" data-tab="notes"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Notater</button>
+    <button data-act="tab" data-tab="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Innstillinger</button>
+  </div>
+</nav>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" role="alertdialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
+<input type="file" id="importFile" accept=".json,application/json" class="sr" tabindex="-1" aria-hidden="true">
+
+<script>
+'use strict';
+/* ========== Hjelpere ========== */
+const KEY = 'timer.v1';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DAYS = ['søn.', 'man.', 'tir.', 'ons.', 'tor.', 'fre.', 'lør.'];
+const MONTHS = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
+const MONTHS_FULL = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; };
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+function isoWeek(d) { // ISO 8601: uka starter mandag, uke 1 inneholder årets første torsdag
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear();
+  return { week: Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7), year: y };
+}
+const fmtDate = d => `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+const fmtDay = d => `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+const fmtShort = d => `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+const fmtClock = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const toMin = s => { const [h, m] = (s || '0:0').split(':').map(Number); return h * 60 + m; };
+const fromMin = m => { m = ((m % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); };
+function entryMin(e) { let a = toMin(e.start), b = toMin(e.end); if (b < a) b += 1440; return Math.max(0, b - a - (Number(e.pause) || 0)); }
+function fmtDur(m) { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; if (h && r) return `${h} t ${r} min`; if (h) return `${h} t`; return `${r} min`; }
+const fmtNum = (x, dec = 2) => x.toLocaleString('nb-NO', { minimumFractionDigits: 0, maximumFractionDigits: dec });
+const fmtDec = m => (m / 60).toFixed(2).replace('.', ',');
+const fmtKr = x => 'kr ' + Math.round(x).toLocaleString('nb-NO');
+const parseNum = v => { const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isFinite(n) && n > 0 ? n : null; };
+
+/* ========== Ikoner ========== */
+const ICONS = {
+  hammer: '<path d="M13 7 4 16l3 3 9-9"/><path d="m11 5 3-2 6 6-3 3z"/>',
+  brush: '<path d="m15 4 5 5-7 7-5-5z"/><path d="M8 11c-3 0-4 2-4 4 0 2-1 3-2 4 4 1 8 0 9-4"/>',
+  home: '<path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  pencil: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="m14 7 3 3"/><path d="M4 20h16"/>',
+  cart: '<path d="M3 4h2l2.5 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/>',
+  people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.9.3 5 2.6 5 5.8"/>',
+  doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
+  van: '<path d="M2 17V7h12v10"/><path d="M14 10h4l3 4v3h-7"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',
+  ruler: '<path d="m3 17 14-14 4 4L7 21z"/><path d="m7 13 2 2M10 10l2 2M13 7l2 2"/>',
+  saw: '<path d="M3 15 15 3l3 3L6 18H3z"/><path d="m15 3 3-1 4 4-1 3-3-3"/><path d="M6 15l1 1M9 12l1 1M12 9l1 1"/>',
+  box: '<path d="m3 7 9-4 9 4v10l-9 4-9-4z"/><path d="m3 7 9 4 9-4M12 11v10"/>',
+  wrench: '<path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3z"/><path d="M14.5 6.5 17 4a4 4 0 0 1 3 3l-2.5 2.5"/>',
+  phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2"/>',
+  leaf: '<path d="M5 19c0-8 5-14 15-15-1 10-7 15-15 15z"/><path d="M5 19 13 11"/>',
+  star: '<path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.3L12 17.5l-5.5 2.9 1-6.3L3 9.7l6.2-.9z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>'
+};
+const icon = (name, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.clock}</svg>`;
+const UI = {
+  left: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>',
+  right: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>',
+  play: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:30px;height:30px"><path d="M7 4v16l13-8z" fill="currentColor"/></svg>',
+  stop: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:28px;height:28px"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>',
+  plus: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  copy: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+  x: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  check: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px;stroke-width:3"><path d="m5 12 5 5 9-10"/></svg>',
+  trash: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+  pin: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8"/></svg>',
+  search: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+  download: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  upload: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>',
+  shield: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+  cloud: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-4px"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8a4.5 4.5 0 0 1-.5 10z"/></svg>'
+};
+const COLORS = ['#8B5E34', '#B7791F', '#3F7D58', '#3B6EA5', '#7A5BA6', '#B4506F', '#5F6B73', '#2B8585', '#A64B27', '#6B7F2A', '#3D4E8C', '#8A4A3A'];
+
+/* ========== Data ========== */
+const DEFAULT_LABELS = [
+  { id: 'prod', name: 'Produksjon', color: '#8B5E34', icon: 'hammer' },
+  { id: 'overflate', name: 'Overflate', color: '#B7791F', icon: 'brush' },
+  { id: 'montering', name: 'Montering hos kunde', color: '#3F7D58', icon: 'home' },
+  { id: 'design', name: 'Design og tegning', color: '#3B6EA5', icon: 'pencil' },
+  { id: 'innkjop', name: 'Innkjøp og henting', color: '#7A5BA6', icon: 'cart' },
+  { id: 'mote', name: 'Kundemøte', color: '#B4506F', icon: 'people' },
+  { id: 'admin', name: 'Admin', color: '#5F6B73', icon: 'doc' },
+  { id: 'reise', name: 'Reise', color: '#2B8585', icon: 'van' }
+].map(l => ({ ...l, archived: false }));
+
+function freshState() {
+  return { v: 1, entries: [], labels: DEFAULT_LABELS.map(l => ({ ...l })), notes: [], timer: null, timerUpdated: 0,
+    settings: { rate: null, weekGoal: 37.5, theme: 'auto', lastBackup: null, firstUse: Date.now() },
+    sync: { dirty: {}, tombs: {}, lastPull: null, lastOk: null, userId: null } };
+}
+let state;
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) { state = normalize(JSON.parse(raw)); return false; } } catch (e) { console.warn(e); }
+  state = freshState(); save(); return true; // starter tomt; eksempeldata kan legges inn under Innstillinger
+}
+function normalize(s) {
+  const f = freshState();
+  return { v: 1, entries: Array.isArray(s.entries) ? s.entries : [], labels: Array.isArray(s.labels) && s.labels.length ? s.labels : f.labels,
+    notes: Array.isArray(s.notes) ? s.notes : [], timer: s.timer && s.timer.startedAt ? s.timer : null, timerUpdated: s.timerUpdated || 0,
+    settings: { ...f.settings, ...(s.settings || {}) },
+    sync: { ...f.sync, ...(s.sync || {}), dirty: { ...((s.sync || {}).dirty || {}) }, tombs: { ...((s.sync || {}).tombs || {}) } } };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Klarte ikke å lagre – er lagringen full?'); } }
+const labelById = id => state.labels.find(l => l.id === id) || { id, name: 'Uten etikett', color: '#8A8278', icon: 'clock' };
+
+/* ---------- Eksempeldata ---------- */
+function addDemo() {
+  const t = today();
+  let mon = mondayOf(t);
+  if ((t.getDay() + 6) % 7 < 4) mon = addDays(mon, -7); // før fredag: bruk forrige uke, så dagene ikke ligger i fremtiden
+  const D = i => ymd(addDays(mon, i));
+  const H = 'Hansen – spisebord i eik', S = 'Kjøkken Solberg', L = 'Skjenk Lie';
+  const rows = [
+    [0, '07:00', '15:30', 30, 'prod', H, 'Limte bordplate, høvlet kanter'],
+    [0, '15:30', '16:00', 0, 'admin', '', 'Faktura og e-post'],
+    [1, '07:30', '09:00', 0, 'design', S, 'Tegnet fronter og skuffer'],
+    [1, '09:30', '10:30', 0, 'innkjop', S, 'Hentet bjørkefiner hos trelasthandelen'],
+    [1, '11:00', '15:00', 30, 'prod', H, 'Bordben, tapper og slisser'],
+    [2, '07:00', '12:00', 15, 'overflate', H, 'Sliping P120 → P180, første strøk hardvoksolje'],
+    [2, '12:30', '14:00', 0, 'mote', L, 'Befaring og mål i stua'],
+    [2, '14:00', '14:45', 0, 'reise', L, ''],
+    [3, '07:00', '10:00', 0, 'overflate', H, 'Andre strøk olje'],
+    [3, '10:00', '14:30', 30, 'prod', S, 'Kappet og kantlimt korpus'],
+    [4, '07:00', '09:30', 0, 'montering', H, 'Levert og montert bordben'],
+    [4, '09:30', '10:15', 0, 'reise', H, ''],
+    [4, '10:30', '13:30', 0, 'prod', S, 'Fronter, første runde'],
+    [4, '13:30', '14:30', 0, 'admin', '', 'Regnskap og kvitteringer']
+  ];
+  rows.forEach(([d, a, b, p, l, c, n], i) => state.entries.push({ id: 'demo' + i + uid(), date: D(d), start: a, end: b, pause: p, labelId: l, client: c, note: n, demo: true, created: Date.now() }));
+  const now = Date.now();
+  state.notes.push(
+    { id: 'demoN1' + uid(), title: 'Mål – kjøkken Solberg', body: 'Vegg A: 3240 mm\nVegg B: 2180 mm\nTakhøyde: 2480 mm\nSjekk skråvegg ved vinduet før kapping.', items: [], pinned: true, updated: now - 864e5, demo: true },
+    { id: 'demoN2' + uid(), title: 'Materialliste – spisebord Hansen', body: '', pinned: false, updated: now - 3 * 864e5, demo: true,
+      items: [['Eik 30 mm, 4 planker', true], ['Hardvoksolje, 1 l', true], ['Slipepapir P120 / P180', true], ['Bordbeslag × 8', false], ['Filtputer', false]].map(([text, done]) => ({ id: uid(), text, done })) },
+    { id: 'demoN3' + uid(), title: 'Handleliste byggvarehuset', body: '', pinned: false, updated: now - 2 * 3600e3, demo: true,
+      items: ['Treskruer 4 × 40', 'Trelim D3', 'Maskeringstape', 'Kantlist bjørk 2,4 m'].map(text => ({ id: uid(), text, done: false })) }
+  );
+}
+const hasDemo = () => state.entries.some(e => e.demo) || state.notes.some(n => n.demo);
+
+/* ========== UI-tilstand ========== */
+const ui = { tab: 'timer', view: 'week', weekStart: mondayOf(today()), month: { y: today().getFullYear(), m: today().getMonth() }, client: '', period: 'all', search: '', csvScope: 'week', csvClient: '' };
+
+function setTheme() { document.documentElement.dataset.theme = state.settings.theme || 'auto'; }
+
+/* ========== Render ========== */
+function render() {
+  $$('nav.tabs button').forEach(b => {
+    b.toggleAttribute('aria-current', b.dataset.tab === ui.tab);
+    if (b.dataset.tab === ui.tab) b.setAttribute('aria-current', 'page');
+    b.classList.toggle('run', b.dataset.tab === 'timer' && !!state.timer && ui.tab !== 'timer');
+  });
+  const app = $('#app');
+  if (ui.tab === 'timer') app.innerHTML = renderTimerTab();
+  else if (ui.tab === 'notes') app.innerHTML = renderNotes();
+  else app.innerHTML = renderSettings();
+  bindSwipe(app);
+  tick();
+}
+
+function renderTimerTab() {
+  const seg = `<div class="seg" role="group" aria-label="Visning">
+    ${[['week', 'Uke'], ['month', 'Måned'], ['client', 'Kunde']].map(([v, t]) => `<button data-act="view" data-v="${v}" aria-pressed="${ui.view === v}">${t}</button>`).join('')}</div>`;
+  const body = ui.view === 'week' ? renderWeek() : ui.view === 'month' ? renderMonth() : renderClient();
+  return `<div class="stack">${seg}${body}</div>`;
+}
+
+function banners() {
+  let h = '';
+  if (hasDemo()) h += `<div class="banner"><p>Du ser <strong>eksempeldata</strong>. Prøv deg fram – slett dem når du vil.</p><button class="btn" data-act="deleteDemo">Slett eksempeldata</button></div>`;
+  if (BUILT_IN && !cloud.session && !cloud.user) h += `<div class="banner"><p>Logg inn én gang, så tas timene vare på i skyen automatisk.</p><button class="btn" data-act="tab" data-tab="settings">Logg inn</button></div>`;
+  if (cloud.url && cloud.key && !cloud.session && cloud.user) h += `<div class="banner"><p>Du er logget ut av skysynk. Endringer lagres bare på telefonen til du logger inn igjen.</p><button class="btn" data-act="tab" data-tab="settings">Logg inn</button></div>`;
+  const realEntries = state.entries.some(e => !e.demo);
+  const since = Date.now() - (state.settings.lastBackup || state.settings.firstUse || Date.now());
+  const days = Math.floor(since / 864e5);
+  const cloudFresh = cloudReady() && state.sync.lastOk && Date.now() - state.sync.lastOk < 14 * 864e5;
+  if (realEntries && days > 14 && !cloudFresh) h += `<div class="banner"><p>${state.settings.lastBackup ? `Det er ${days} dager siden forrige backup.` : 'Du har ikke tatt backup ennå.'} Ta en kopi av dataene dine.</p><button class="btn" data-act="exportBackup">Ta backup</button></div>`;
+  return h;
+}
+
+function timerCard() {
+  if (state.timer) {
+    return `<div class="card"><div class="clocksub">Klokka går siden ${fmtClock(state.timer.startedAt)}</div>
+      <div class="clock num" id="clock" role="timer" aria-live="off">00:00:00</div>
+      <div style="margin-top:14px"><button class="btn huge stop" data-act="stop">${UI.stop} Stopp</button></div></div>`;
+  }
+  return `<div class="card"><button class="btn huge primary" data-act="start">${UI.play} Start</button>
+    <div class="quick"><button class="btn" data-act="newEntry">${UI.plus} Ny føring</button><button class="btn" data-act="copyLast">${UI.copy} Kopier forrige</button></div></div>`;
+}
+
+function labelBreakdown(entries, total) {
+  if (!total) return '';
+  const by = {};
+  entries.forEach(e => by[e.labelId] = (by[e.labelId] || 0) + entryMin(e));
+  const arr = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  return `<div class="bar" role="img" aria-label="Fordeling per etikett: ${esc(arr.map(([id, m]) => labelById(id).name + ' ' + fmtDur(m)).join(', '))}">
+    ${arr.map(([id, m]) => `<span style="width:${(m / total * 100).toFixed(2)}%;background:${labelById(id).color}"></span>`).join('')}</div>
+    <ul class="legend">${arr.map(([id, m]) => `<li><span class="dot" style="background:${labelById(id).color}"></span><span class="nm">${esc(labelById(id).name)}</span><span class="num" style="font-weight:700">${fmtDur(m)}</span></li>`).join('')}</ul>`;
+}
+
+function ring(total) {
+  const goal = state.settings.weekGoal;
+  if (!goal) return '';
+  const p = Math.min(1, total / 60 / goal), C = 2 * Math.PI * 38;
+  return `<div class="ring" role="img" aria-label="${Math.round(total / 60 / goal * 100)} prosent av ukemålet på ${fmtNum(goal, 1)} timer">
+    <svg viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="38" fill="none" stroke="var(--surface2)" stroke-width="10"/>
+    <circle cx="46" cy="46" r="38" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(p * C).toFixed(1)} ${C.toFixed(1)}"/></svg>
+    <div class="pct num"><div>${Math.round(total / 60 / goal * 100)} %<small>av ${fmtNum(goal, 1)} t</small></div></div></div>`;
+}
+
+function entryRow(e, opts = {}) {
+  const l = labelById(e.labelId);
+  const sub = [opts.showDate ? fmtDay(parseYmd(e.date)) : '', e.client, e.note].filter(Boolean).join(' · ') || (e.pause ? `Pause ${e.pause} min` : '');
+  const right = opts.rate ? `<div style="text-align:right"><div class="dur num">${fmtDur(entryMin(e))}</div><div class="muted num" style="font-size:14px">${fmtKr(entryMin(e) / 60 * opts.rate)}</div></div>` : `<div class="dur num">${fmtDur(entryMin(e))}</div>`;
+  return `<div class="swipe" data-kind="entry" data-id="${e.id}"><div class="swipe-bg" aria-hidden="true">${UI.trash} Slett</div>
+    <div class="swipe-row"><button class="entry" data-act="editEntry" data-id="${e.id}" aria-label="${esc(l.name)}, ${e.start} til ${e.end}, ${fmtDur(entryMin(e))}. Trykk for å endre">
+      <span class="chipic" style="background:${l.color}">${icon(l.icon)}</span>
+      <span class="mid"><span class="t1 num" style="display:block">${e.start}–${e.end} · ${esc(l.name)}</span><span class="t2" style="display:block">${esc(sub)}</span></span>
+      ${right}</button></div></div>`;
+}
+
+const sortEntries = arr => arr.slice().sort((a, b) => a.date === b.date ? toMin(a.start) - toMin(b.start) : a.date < b.date ? -1 : 1);
+
+function renderWeek() {
+  const ws = ui.weekStart, we = addDays(ws, 6), wk = isoWeek(ws);
+  const a = ymd(ws), b = ymd(we), td = ymd(today());
+  const entries = sortEntries(state.entries.filter(e => e.date >= a && e.date <= b));
+  const total = entries.reduce((s, e) => s + entryMin(e), 0);
+  const isCur = a === ymd(mondayOf(today()));
+  const range = ws.getFullYear() === we.getFullYear() ? `${fmtShort(ws)} – ${fmtShort(we)} ${we.getFullYear()}` : `${fmtShort(ws)} ${ws.getFullYear()} – ${fmtShort(we)} ${we.getFullYear()}`;
+  let h = `<div><div class="periodhead">
+      <button class="btn iconbtn" data-act="prevWeek" aria-label="Forrige uke">${UI.left}</button>
+      <div><div class="title num">Uke ${wk.week}</div><div class="sub num">${range}</div></div>
+      <button class="btn iconbtn" data-act="nextWeek" aria-label="Neste uke">${UI.right}</button></div>
+      <div class="todaybtn"><button class="btn ${isCur ? 'ghost' : 'primary'}" data-act="today" ${isCur ? 'aria-disabled="true"' : ''}>I dag</button></div></div>`;
+  h += banners();
+  h += timerCard();
+  h += `<div class="card"><div class="sumgrid"><div style="flex:1"><h2 style="margin:0 0 2px">Sum uka</h2><div class="big num">${fmtDur(total)}</div>
+      <div class="muted num">${fmtDec(total)} t${state.settings.rate && total ? ' · ' + fmtKr(total / 60 * state.settings.rate) : ''}</div></div>${ring(total)}</div>
+      ${labelBreakdown(entries, total)}</div>`;
+  if (!entries.length) {
+    h += `<div class="card empty"><strong>Ingen timer ført denne uka</strong>Trykk Start når du begynner å jobbe, eller «Ny føring» for å føre i etterkant.</div>`;
+  }
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(ws, i), ds = ymd(d), list = entries.filter(e => e.date === ds);
+    if (i >= 5 && !list.length) continue;
+    if (!entries.length && ds !== td) continue;
+    const sum = list.reduce((s, e) => s + entryMin(e), 0);
+    h += `<section class="day" aria-label="${fmtDate(d)}"><div class="dayhead"><span class="d">${fmtDay(d)}${ds === td ? '<span class="tag">I dag</span>' : ''}</span><span class="s num">${sum ? fmtDur(sum) : ''}</span></div>
+      ${list.map(e => entryRow(e)).join('')}
+      <button class="addday" data-act="newEntry" data-date="${ds}">${UI.plus} ${list.length ? 'Legg til' : 'Før timer'}</button></section>`;
+  }
+  if (entries.length) h += `<button class="btn ghost wide" data-act="csv" data-scope="week">${UI.download} Eksporter uka som CSV</button>`;
+  if (cloud.url && cloud.key && cloud.session) h += `<p class="muted" style="text-align:center;margin:0;font-size:14px">${UI.cloud} <span data-syncstatus>${esc(syncText())}</span></p>`;
+  return h;
+}
+
+function monthRange(y, m) { return [new Date(y, m, 1), new Date(y, m + 1, 0)]; }
+function renderMonth() {
+  const { y, m } = ui.month, [first, last] = monthRange(y, m), a = ymd(first), b = ymd(last);
+  const entries = state.entries.filter(e => e.date >= a && e.date <= b);
+  const total = entries.reduce((s, e) => s + entryMin(e), 0);
+  let rows = '';
+  for (let ws = mondayOf(first); ws <= last; ws = addDays(ws, 7)) {
+    const we = addDays(ws, 6), from = ymd(ws < first ? first : ws), to = ymd(we > last ? last : we);
+    const sum = entries.filter(e => e.date >= from && e.date <= to).reduce((s, e) => s + entryMin(e), 0);
+    rows += `<button data-act="gotoWeek" data-ws="${ymd(ws)}"><span class="grow"><strong>Uke ${isoWeek(ws).week}</strong><br><span class="muted num" style="font-size:15px">${fmtShort(parseYmd(from))} – ${fmtShort(parseYmd(to))}</span></span><span class="val num">${sum ? fmtDur(sum) : '–'}</span>${UI.right}</button>`;
+  }
+  return `<div class="periodhead"><button class="btn iconbtn" data-act="prevMonth" aria-label="Forrige måned">${UI.left}</button>
+      <div><div class="title" style="font-size:34px">${MONTHS_FULL[m][0].toUpperCase() + MONTHS_FULL[m].slice(1)}</div><div class="sub">${y}</div></div>
+      <button class="btn iconbtn" data-act="nextMonth" aria-label="Neste måned">${UI.right}</button></div>
+    <div class="card"><h2 style="margin:0 0 2px">Sum måneden</h2><div class="big num" style="font-size:40px;font-weight:800">${fmtDur(total)}</div>
+      <div class="muted num">${fmtDec(total)} t${state.settings.rate && total ? ' · ' + fmtKr(total / 60 * state.settings.rate) : ''}</div>${labelBreakdown(entries, total)}</div>
+    <div><h2>Per uke</h2><div class="list">${rows}</div></div>
+    ${total ? `<button class="btn ghost wide" data-act="csv" data-scope="month">${UI.download} Eksporter måneden som CSV</button>` : `<div class="card empty"><strong>Ingen timer denne måneden</strong>Bytt måned med pilene.</div>`}`;
+}
+
+function clientsByRecency() {
+  const map = new Map();
+  sortEntries(state.entries).reverse().forEach(e => { const c = (e.client || '').trim(); if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), c); });
+  return [...map.values()];
+}
+function periodRange(p) {
+  const t = today();
+  if (p === 'thisMonth') return monthRange(t.getFullYear(), t.getMonth()).map(ymd);
+  if (p === 'lastMonth') return monthRange(t.getFullYear(), t.getMonth() - 1).map(ymd);
+  if (p === 'year') return [t.getFullYear() + '-01-01', t.getFullYear() + '-12-31'];
+  return ['0000-00-00', '9999-99-99'];
+}
+const clientEntries = () => { const [a, b] = periodRange(ui.period); return sortEntries(state.entries.filter(e => (e.client || '').trim().toLowerCase() === ui.client.toLowerCase() && e.date >= a && e.date <= b)); };
+
+function renderClient() {
+  const clients = clientsByRecency();
+  if (!clients.length) return `<div class="card empty"><strong>Ingen kunder ennå</strong>Skriv kunde eller prosjekt på en føring, så kan du se timene samlet her.</div>`;
+  if (!clients.some(c => c.toLowerCase() === ui.client.toLowerCase())) ui.client = clients[0];
+  const list = clientEntries(), total = list.reduce((s, e) => s + entryMin(e), 0), rate = state.settings.rate;
+  return `<div><label class="f" for="clientSel">Kunde / prosjekt</label>
+      <select class="inp" id="clientSel" data-change="client">${clients.map(c => `<option ${c.toLowerCase() === ui.client.toLowerCase() ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="chips" role="group" aria-label="Periode">${[['all', 'Alt'], ['thisMonth', 'Denne måneden'], ['lastMonth', 'Forrige måned'], ['year', 'I år']].map(([v, t]) => `<button data-act="period" data-p="${v}" aria-pressed="${ui.period === v}">${t}</button>`).join('')}</div>
+    <div class="card"><h2 style="margin:0 0 2px">Sum ${esc(ui.client)}</h2><div class="num" style="font-size:40px;font-weight:800">${fmtDur(total)}</div>
+      <div class="muted num" style="font-size:18px">${fmtDec(total)} timer${rate ? ` × ${fmtKr(rate)} = <strong style="color:var(--text)">${fmtKr(total / 60 * rate)}</strong> eks. mva.` : ''}</div>
+      ${rate ? '' : '<div class="hint">Legg inn timepris i Innstillinger for å se beløp.</div>'}
+      ${labelBreakdown(list, total)}</div>
+    ${list.length ? `<div class="stack" style="gap:8px">${list.map(e => entryRow(e, { showDate: true, rate })).join('')}</div>
+      <button class="btn ghost wide" data-act="csv" data-scope="client">${UI.download} Eksporter som CSV (fakturagrunnlag)</button>`
+      : `<div class="card empty"><strong>Ingen timer i perioden</strong>Velg en annen periode.</div>`}`;
+}
+
+/* ---------- Notater ---------- */
+function renderNotes() {
+  const q = ui.search.trim().toLowerCase();
+  const match = n => !q || [n.title, n.body, ...(n.items || []).map(i => i.text)].join(' ').toLowerCase().includes(q);
+  const notes = state.notes.filter(match).sort((a, b) => (b.pinned - a.pinned) || (b.updated - a.updated));
+  const card = n => {
+    const items = n.items || [], done = items.filter(i => i.done).length;
+    const prev = (n.body || '').split('\n').find(Boolean) || (items.length ? items.filter(i => !i.done).slice(0, 3).map(i => i.text).join(', ') : '');
+    return `<div class="swipe" data-kind="note" data-id="${n.id}"><div class="swipe-bg" aria-hidden="true">${UI.trash} Slett</div><div class="swipe-row">
+      <button class="note" data-act="editNote" data-id="${n.id}"><span class="t">${n.pinned ? UI.pin.replace('class="ic"', 'class="ic" role="img" aria-label="Festet"') : ''}<span>${esc(n.title || 'Uten tittel')}</span>${items.length ? `<span class="prog num">${done}/${items.length}</span>` : ''}</span>
+      ${prev ? `<span class="p" style="display:block">${esc(prev)}</span>` : ''}<span class="m" style="display:block">${fmtDate(new Date(n.updated))} kl. ${fmtClock(n.updated)}</span></button></div></div>`;
+  };
+  const pinned = notes.filter(n => n.pinned), rest = notes.filter(n => !n.pinned);
+  let list = '';
+  if (!state.notes.length) list = `<div class="card empty"><strong>Ingen notater ennå</strong>Trykk «Nytt notat» for mål, materiallister eller handlelister.</div>`;
+  else if (!notes.length) list = `<div class="card empty"><strong>Ingen treff</strong>Prøv et annet søkeord.</div>`;
+  else {
+    if (pinned.length) list += `<h2 style="margin:4px 0 -4px">Festet</h2>${pinned.map(card).join('')}`;
+    if (rest.length) list += `${pinned.length ? '<h2 style="margin:8px 0 -4px">Andre</h2>' : ''}${rest.map(card).join('')}`;
+  }
+  return `<div class="stack"><div class="row"><h1 class="grow">Notater</h1><button class="btn primary" data-act="newNote">${UI.plus} Nytt notat</button></div>
+    <div style="position:relative"><label for="noteSearch" class="sr">Søk i notater</label>
+      <span style="position:absolute;left:14px;top:16px;color:var(--muted)">${UI.search}</span>
+      <input class="inp" id="noteSearch" type="search" placeholder="Søk i notater" value="${esc(ui.search)}" style="padding-left:48px" autocomplete="off"></div>
+    <div class="stack" id="noteList" style="gap:10px">${list}</div></div>`;
+}
+
+/* ---------- Innstillinger ---------- */
+function renderSettings() {
+  const s = state.settings, wk = isoWeek(ui.weekStart).week, mName = MONTHS_FULL[ui.month.m] + ' ' + ui.month.y;
+  const clients = clientsByRecency();
+  if (!ui.csvClient && clients[0]) ui.csvClient = clients[0];
+  const persisted = window.__persisted;
+  return `<div class="stack"><h1>Innstillinger</h1>
+    <div class="card stack"><h2 style="margin:0">Arbeid</h2>
+      <div><label class="f" for="rate">Timepris (kr per time, valgfri)</label><input class="inp num" id="rate" inputmode="decimal" placeholder="F.eks. 750" value="${s.rate ? fmtNum(s.rate) : ''}" data-change="rate">
+        <div class="hint">Brukes til å vise beløp i kundevisningen og CSV.</div></div>
+      <div><label class="f" for="goal">Ukemål (timer, valgfri)</label><input class="inp num" id="goal" inputmode="decimal" placeholder="F.eks. 37,5" value="${s.weekGoal ? fmtNum(s.weekGoal, 1) : ''}" data-change="goal">
+        <div class="hint">Vises som en fremdriftsring i ukevisningen. Tomt felt = av.</div></div></div>
+
+    <div class="card stack"><h2 style="margin:0">Utseende</h2>
+      <div class="seg" role="group" aria-label="Tema">${[['auto', 'Automatisk'], ['light', 'Lys'], ['dark', 'Mørk']].map(([v, t]) => `<button data-act="theme" data-v="${v}" aria-pressed="${(s.theme || 'auto') === v}">${t}</button>`).join('')}</div></div>
+
+    <div><h2>Etiketter</h2><div class="list">
+      ${state.labels.map(l => `<button data-act="editLabel" data-id="${l.id}"><span class="chipic" style="background:${l.color};width:40px;height:40px">${icon(l.icon)}</span><span class="grow" style="font-weight:650${l.archived ? ';opacity:.6' : ''}">${esc(l.name)}${l.archived ? ' <span class="prog">Arkivert</span>' : ''}</span>${UI.right}</button>`).join('')}
+      <button data-act="newLabel" style="color:var(--accent);font-weight:700">${UI.plus} Ny etikett</button></div></div>
+
+    ${renderCloud()}
+
+    <div class="card stack"><h2 style="margin:0">Data og backup</h2>
+      <p style="margin:0" class="muted">${cloudReady() ? 'Skysynk tar vare på dataene dine. En backup-fil i tillegg er likevel lurt av og til.' : 'Uten skysynk lagres alt bare på denne telefonen. Ta backup jevnlig og legg fila et trygt sted (f.eks. e-post til deg selv eller skylagring).'}</p>
+      <div class="row"><span class="grow">Siste backup</span><strong>${s.lastBackup ? fmtDate(new Date(s.lastBackup)) : 'Aldri'}</strong></div>
+      <button class="btn primary wide" data-act="exportBackup">${UI.download} Eksporter backup</button>
+      <button class="btn wide" data-act="importBackup">${UI.upload} Importer backup</button>
+      <hr style="border:0;border-top:1px solid var(--line);width:100%;margin:4px 0">
+      <div><label class="f" for="csvScope">Eksporter timer som CSV</label>
+        <select class="inp" id="csvScope" data-change="csvScope">
+          <option value="week" ${ui.csvScope === 'week' ? 'selected' : ''}>Valgt uke (uke ${wk})</option>
+          <option value="month" ${ui.csvScope === 'month' ? 'selected' : ''}>Valgt måned (${mName})</option>
+          <option value="client" ${ui.csvScope === 'client' ? 'selected' : ''} ${clients.length ? '' : 'disabled'}>Én kunde / ett prosjekt</option>
+        </select></div>
+      ${ui.csvScope === 'client' && clients.length ? `<div><label class="f" for="csvClient">Kunde / prosjekt</label><select class="inp" id="csvClient" data-change="csvClient">${clients.map(c => `<option ${c === ui.csvClient ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
+      <button class="btn wide" data-act="csv" data-scope="settings">${UI.download} Eksporter CSV</button>
+      <div class="hint">Semikolon-separert med komma som desimaltegn – åpnes riktig i norsk Excel.</div></div>
+
+    <div class="card stack"><h2 style="margin:0">Eksempeldata</h2>
+      ${hasDemo() ? `<p style="margin:0" class="muted">Appen inneholder eksempeldata for én uke og tre notater.</p><button class="btn wide" data-act="deleteDemo">${UI.trash} Slett eksempeldata</button>`
+        : `<p style="margin:0" class="muted">Ingen eksempeldata. Du kan legge dem inn igjen for å teste.</p><button class="btn wide" data-act="loadDemo">Legg inn eksempeldata</button>`}</div>
+
+    <div class="card stack"><h2 style="margin:0">${UI.shield.replace('class="ic"', 'class="ic" style="width:18px;height:18px;vertical-align:-3px"')} Personvern</h2>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+        <li>Timer, notater og kundenavn lagres på telefonen${BUILT_IN ? ', og når du er innlogget, også i en database hos Supabase i EU' : ''}.</li>
+        <li>Bare du kan lese dataene. Databasen stenger alle andre kontoer ute.</li>
+        <li>Ingen sporing, analyse eller reklame. Appen snakker bare med sin egen database.</li>
+        <li>Skriv bare det du trenger om kundene (navn og prosjekt). Ikke skriv personnummer, helseopplysninger eller lignende i notatene.</li>
+        <li>Du kan når som helst ta ut alt (backup) eller slette alt, både på telefonen og i skyen.</li>
+      </ul></div>
+
+    <div class="card stack"><h2 style="margin:0">Faresone</h2>
+      <button class="btn danger wide" data-act="wipeAll">${UI.trash} Slett alle data</button></div>
+
+    <p class="muted" style="text-align:center;font-size:14px;margin:0">${UI.shield.replace('class="ic"', 'class="ic" style="width:16px;height:16px;vertical-align:-3px"')} Lagring: ${persisted === true ? 'varig (nettleseren rydder ikke bort dataene)' : persisted === false ? 'vanlig – ta backup jevnlig' : 'sjekker …'}<br>Timer · versjon 3</p></div>`;
+}
+
+/* ========== Klokke ========== */
+function tick() {
+  const el = $('#clock');
+  if (!el || !state.timer) return;
+  const s = Math.max(0, Math.floor((Date.now() - state.timer.startedAt) / 1000));
+  el.textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+}
+setInterval(tick, 1000);
+
+/* ========== Sheet (redigering) ========== */
+const sheet = $('#sheet');
+let sheetCtx = null, lastFocus = null;
+function openSheet(title, bodyHtml, footHtml, ctx) {
+  lastFocus = document.activeElement;
+  sheetCtx = ctx;
+  sheet.innerHTML = `<div class="sheet-head"><button class="btn iconbtn" data-sheet="close" aria-label="Lukk" style="background:transparent">${UI.x}</button><h1 id="sheetTitle">${title}</h1><span style="width:56px"></span></div>
+    <div class="sheet-body"><div class="sheet-inner">${bodyHtml}</div></div><div class="sheet-foot"><div class="in">${footHtml}</div></div>`;
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => $('[data-sheet="close"]', sheet).focus({ preventScroll: true }), 50);
+}
+function closeSheet() {
+  if (sheetCtx && sheetCtx.onClose) sheetCtx.onClose();
+  sheet.classList.remove('open');
+  document.body.style.overflow = '';
+  sheetCtx = null;
+  render();
+  if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+}
+sheet.addEventListener('click', e => {
+  const b = e.target.closest('[data-sheet]');
+  if (!b) return;
+  if (b.dataset.sheet === 'close') closeSheet();
+  else if (sheetCtx && sheetCtx.on) sheetCtx.on(b.dataset.sheet, b, e);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open') && !$('#modal').classList.contains('open')) closeSheet(); });
+
+/* ---------- Føring ---------- */
+const roundNow = (step = 5) => { const n = new Date(); return Math.round((n.getHours() * 60 + n.getMinutes()) / step) * step; };
+function newDraft(date) {
+  const ds = date || ymd(today());
+  const same = sortEntries(state.entries.filter(e => e.date === ds));
+  let start = '07:00', end = '15:00';
+  if (same.length) { start = same[same.length - 1].end; end = fromMin(toMin(start) + 60); }
+  if (ds === ymd(today())) { const n = roundNow(15); if (n > toMin(start)) end = fromMin(Math.min(n, 1439)); }
+  return { date: ds, start, end, pause: 0, labelId: '', client: '', note: '' };
+}
+
+function openEntry(draft, opts = {}) {
+  const d = { ...draft };
+  const isEdit = !!d.id;
+  const labels = state.labels.filter(l => !l.archived || l.id === d.labelId);
+  const body = `
+    ${opts.fromTimer ? `<div class="banner"><p>Klokka er stoppet ved ${d.end}. Velg etikett og lagre. Avbryter du, fortsetter klokka å gå.</p></div>` : ''}
+    <div><span class="f" style="display:block;font-weight:700;margin-bottom:6px">Dato</span>
+      <div class="row"><button class="btn iconbtn" data-sheet="dStep" data-n="-1" aria-label="Dagen før">${UI.left}</button>
+        <span class="grow" style="position:relative"><button class="btn wide num" data-sheet="dPick" id="fDateTxt" style="min-height:56px;font-size:18px">${fmtDate(parseYmd(d.date))}</button>
+        <input type="date" id="fDate" value="${d.date}" tabindex="-1" aria-hidden="true" style="position:absolute;inset:0;opacity:0;pointer-events:none"></span>
+        <button class="btn iconbtn" data-sheet="dStep" data-n="1" aria-label="Dagen etter">${UI.right}</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn grow" data-sheet="dToday" style="min-height:48px">I dag</button><button class="btn grow" data-sheet="dYest" style="min-height:48px">I går</button></div></div>
+    <div class="times">
+      ${['start', 'end'].map(k => `<div class="timebox"><label class="lbl" for="f_${k}">${k === 'start' ? 'Fra' : 'Til'}</label>
+        <input type="text" id="f_${k}" class="num" value="${d[k]}" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="tt:mm" required>
+        <div class="steps"><button class="btn" data-sheet="step" data-k="${k}" data-n="-15" aria-label="${k === 'start' ? 'Fra' : 'Til'} 15 minutter tidligere">−15</button><button class="btn" data-sheet="step" data-k="${k}" data-n="15" aria-label="${k === 'start' ? 'Fra' : 'Til'} 15 minutter senere">+15</button></div></div>`).join('')}
+    </div>
+    <div class="durline num" id="fDur" aria-live="polite"></div>
+    <div><span class="f" id="pauseLbl" style="display:block;font-weight:700;margin-bottom:6px">Pause</span>
+      <div class="chips" role="group" aria-labelledby="pauseLbl">${[0, 15, 30, 45, 60].map(p => `<button data-sheet="pause" data-p="${p}" aria-pressed="${Number(d.pause) === p}">${p ? p + ' min' : 'Ingen'}</button>`).join('')}
+        <label class="sr" for="fPause">Pause i minutter</label><input class="inp num" id="fPause" type="number" inputmode="numeric" min="0" max="600" value="${d.pause || ''}" placeholder="Annet" style="width:110px;min-height:48px"></div></div>
+    <div><span id="lblLbl" style="display:block;font-weight:700;margin-bottom:6px">Etikett</span>
+      <div class="labelgrid" role="group" aria-labelledby="lblLbl">${labels.map(l => `<button class="labelbtn" style="--c:${l.color}" data-sheet="label" data-id="${l.id}" aria-pressed="${d.labelId === l.id}"><span class="chipic">${icon(l.icon)}</span>${esc(l.name)}</button>`).join('')}</div>
+      <div class="err" id="lblErr" hidden>Velg en etikett først.</div></div>
+    <div><label class="f" for="fClient">Kunde / prosjekt <span class="muted" style="font-weight:500">(valgfritt)</span></label>
+      <input class="inp" id="fClient" value="${esc(d.client)}" autocomplete="off" placeholder="F.eks. Hansen – spisebord">
+      <div class="chips" id="fClientSug" style="margin-top:8px"></div></div>
+    <div><label class="f" for="fNote">Notat <span class="muted" style="font-weight:500">(valgfritt)</span></label>
+      <textarea class="inp" id="fNote" placeholder="Hva gjorde du?">${esc(d.note)}</textarea></div>`;
+  const foot = `${isEdit ? `<button class="btn danger" data-sheet="delete" aria-label="Slett føringen">${UI.trash}</button>` : ''}<button class="btn primary" data-sheet="save">Lagre</button>`;
+
+  const updDur = () => {
+    const m = entryMin(d);
+    let a = toMin(d.start), b = toMin(d.end);
+    $('#fDur').innerHTML = `${fmtDur(m)}<small>${b < a ? 'Over midnatt · ' : ''}${d.pause ? `etter ${d.pause} min pause` : 'ingen pause'}</small>`;
+  };
+  const updSug = () => {
+    const q = d.client.trim().toLowerCase();
+    const sug = clientsByRecency().filter(c => c.toLowerCase() !== q && (!q || c.toLowerCase().includes(q))).slice(0, 6);
+    $('#fClientSug').innerHTML = sug.map(c => `<button data-sheet="client" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  };
+  const syncPauseChips = () => $$('[data-sheet="pause"]', sheet).forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.p) === Number(d.pause)));
+
+  openSheet(isEdit ? 'Endre føring' : 'Ny føring', body, foot, {
+    on(act, b) {
+      if (act === 'dToday') setDate(today());
+      if (act === 'dYest') setDate(addDays(today(), -1));
+      if (act === 'dStep') setDate(addDays(parseYmd(d.date), Number(b.dataset.n)));
+      if (act === 'dPick') { const i = $('#fDate'); try { i.showPicker(); } catch (_) { i.focus(); i.click(); } }
+      if (act === 'step') { d[b.dataset.k] = fromMin(toMin(d[b.dataset.k]) + Number(b.dataset.n)); $('#f_' + b.dataset.k).value = d[b.dataset.k]; updDur(); }
+      if (act === 'pause') { d.pause = Number(b.dataset.p); $('#fPause').value = d.pause || ''; syncPauseChips(); updDur(); }
+      if (act === 'label') { d.labelId = b.dataset.id; $$('[data-sheet="label"]', sheet).forEach(x => x.setAttribute('aria-pressed', x === b)); $('#lblErr').hidden = true; }
+      if (act === 'client') { d.client = b.dataset.c; $('#fClient').value = d.client; updSug(); }
+      if (act === 'delete') { const id = d.id; sheetCtx = null; closeSheet(); deleteItem('entry', id); }
+      if (act === 'save') {
+        if (!d.labelId) { $('#lblErr').hidden = false; $('#lblErr').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+        if (!d.date || !d.start || !d.end) { toast('Fyll inn dato og klokkeslett'); return; }
+        const rec = { id: d.id || uid(), date: d.date, start: d.start, end: d.end, pause: Number(d.pause) || 0, labelId: d.labelId, client: d.client.trim(), note: d.note.trim(), created: d.created || Date.now() };
+        let stored = rec;
+        if (isEdit) { const i = state.entries.findIndex(e => e.id === d.id); if (i >= 0) stored = state.entries[i] = { ...state.entries[i], ...rec }; else state.entries.push(rec); }
+        else state.entries.push(rec);
+        touch('entry', stored);
+        if (opts.fromTimer) { state.timer = null; touch('timer'); }
+        save();
+        ui.view = 'week'; ui.weekStart = mondayOf(parseYmd(rec.date));
+        sheetCtx = null; closeSheet();
+        toast(`Lagret · ${fmtDur(entryMin(rec))}`);
+      }
+    }
+  });
+  function setDate(dt) { d.date = ymd(dt); $('#fDate').value = d.date; $('#fDateTxt').textContent = fmtDate(dt); }
+  $('#fDate').addEventListener('change', e => { if (e.target.value) setDate(parseYmd(e.target.value)); });
+  // 24-timers klokkeslett: godtar «730», «0730», «7:30», «7.30», «7»
+  const parseTime = v => {
+    v = String(v).trim().replace(/[.,\s]/g, ':');
+    let h, m;
+    if (/^\d{1,2}:\d{1,2}$/.test(v)) [h, m] = v.split(':').map(Number);
+    else if (/^\d{1,2}$/.test(v)) { h = Number(v); m = 0; }
+    else if (/^\d{3,4}$/.test(v)) { h = Number(v.slice(0, -2)); m = Number(v.slice(-2)); }
+    else return null;
+    if (h === 24 && m === 0) h = 0;
+    return h < 24 && m < 60 ? pad(h) + ':' + pad(m) : null;
+  };
+  ['start', 'end'].forEach(k => {
+    const el = $('#f_' + k);
+    el.addEventListener('focus', () => el.select());
+    el.addEventListener('input', () => { const t = parseTime(el.value); if (t && el.value.replace(/\D/g, '').length >= 3) { d[k] = t; updDur(); } });
+    el.addEventListener('blur', () => { const t = parseTime(el.value); if (t) d[k] = t; el.value = d[k]; updDur(); });
+  });
+  $('#fPause').addEventListener('input', e => { d.pause = Math.max(0, parseInt(e.target.value, 10) || 0); syncPauseChips(); updDur(); });
+  $('#fClient').addEventListener('input', e => { d.client = e.target.value; updSug(); });
+  $('#fNote').addEventListener('input', e => { d.note = e.target.value; });
+  updDur(); updSug();
+}
+
+/* ---------- Notat ---------- */
+function openNote(note) {
+  const isNew = !note;
+  const n = note ? JSON.parse(JSON.stringify(note)) : { id: uid(), title: '', body: '', items: [], pinned: false, updated: Date.now() };
+  const orig = JSON.stringify(n);
+  const itemsHtml = () => n.items.map(i => `<div class="check ${i.done ? 'done' : ''}" data-iid="${i.id}">
+      <button class="box" data-sheet="toggle" data-iid="${i.id}" role="checkbox" aria-checked="${i.done}" aria-label="Kryss av ${esc(i.text)}"><span>${i.done ? UI.check : ''}</span></button>
+      <label class="sr" for="it_${i.id}">Punkt</label><input id="it_${i.id}" data-iid="${i.id}" value="${esc(i.text)}">
+      <button class="rm" data-sheet="rmItem" data-iid="${i.id}" aria-label="Fjern punkt">${UI.x}</button></div>`).join('');
+  const body = `<div><label class="f" for="nTitle">Tittel</label><input class="inp" id="nTitle" value="${esc(n.title)}" placeholder="F.eks. Materialliste – kjøkken"></div>
+    <button class="btn pinbtn" data-sheet="pin" aria-pressed="${n.pinned}" style="align-self:flex-start">${UI.pin} <span id="pinTxt">${n.pinned ? 'Festet øverst' : 'Fest øverst'}</span></button>
+    <div><label class="f" for="nBody">Tekst</label><textarea class="inp" id="nBody" placeholder="Skriv notatet her">${esc(n.body)}</textarea></div>
+    <div><span style="display:block;font-weight:700;margin-bottom:6px">Avkrysningsliste</span>
+      <div class="checks" id="nItems">${itemsHtml()}</div>
+      <div class="row" style="margin-top:8px"><label class="sr" for="nNew">Nytt punkt</label><input class="inp grow" id="nNew" placeholder="Nytt punkt, f.eks. treskruer" enterkeyhint="done">
+        <button class="btn primary iconbtn" data-sheet="addItem" aria-label="Legg til punkt">${UI.plus}</button></div>
+      <button class="btn ghost" data-sheet="clearDone" style="margin-top:10px" ${n.items.some(i => i.done) ? '' : 'hidden'} id="clearDone">Fjern avkryssede</button></div>
+    ${isNew ? '' : `<div class="hint">Sist endret ${fmtDate(new Date(n.updated))} kl. ${fmtClock(n.updated)}</div>`}`;
+  const foot = `${isNew ? '' : `<button class="btn danger" data-sheet="delete" aria-label="Slett notatet">${UI.trash}</button>`}<button class="btn primary" data-sheet="done">Ferdig</button>`;
+  const redrawItems = () => { $('#nItems').innerHTML = itemsHtml(); $('#clearDone').hidden = !n.items.some(i => i.done); };
+  const isEmpty = () => !n.title.trim() && !n.body.trim() && !n.items.length;
+  const commit = () => {
+    if (JSON.stringify(n) === orig) return;
+    if (isNew && isEmpty()) return;
+    n.updated = Date.now();
+    const i = state.notes.findIndex(x => x.id === n.id);
+    if (i >= 0) state.notes[i] = n; else state.notes.push(n);
+    touch('note', n);
+    save();
+  };
+  const addItem = () => { const v = $('#nNew').value.trim(); if (!v) return; n.items.push({ id: uid(), text: v, done: false }); $('#nNew').value = ''; redrawItems(); $('#nNew').focus(); };
+  openSheet(isNew ? 'Nytt notat' : 'Notat', body, foot, {
+    onClose: commit,
+    on(act, b) {
+      if (act === 'pin') { n.pinned = !n.pinned; b.setAttribute('aria-pressed', n.pinned); $('#pinTxt').textContent = n.pinned ? 'Festet øverst' : 'Fest øverst'; }
+      if (act === 'toggle') { const it = n.items.find(i => i.id === b.dataset.iid); it.done = !it.done; redrawItems(); }
+      if (act === 'rmItem') { n.items = n.items.filter(i => i.id !== b.dataset.iid); redrawItems(); }
+      if (act === 'addItem') addItem();
+      if (act === 'clearDone') { n.items = n.items.filter(i => !i.done); redrawItems(); }
+      if (act === 'done') closeSheet();
+      if (act === 'delete') { sheetCtx = null; closeSheet(); deleteItem('note', n.id); }
+    }
+  });
+  $('#nTitle').addEventListener('input', e => n.title = e.target.value);
+  $('#nBody').addEventListener('input', e => n.body = e.target.value);
+  $('#nItems').addEventListener('input', e => { const it = n.items.find(i => i.id === e.target.dataset.iid); if (it) it.text = e.target.value; });
+  $('#nNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
+}
+
+/* ---------- Etikett ---------- */
+function openLabel(label) {
+  const isNew = !label;
+  const l = label ? { ...label } : { id: uid(), name: '', color: COLORS[state.labels.length % COLORS.length], icon: 'star', archived: false };
+  const body = `<div><label class="f" for="lName">Navn</label><input class="inp" id="lName" value="${esc(l.name)}" placeholder="F.eks. Reparasjon"></div>
+    <div><span style="display:block;font-weight:700;margin-bottom:6px" id="colLbl">Farge</span><div class="swatches" role="group" aria-labelledby="colLbl">${COLORS.map(c => `<button data-sheet="color" data-c="${c}" style="background:${c}" aria-pressed="${l.color === c}" aria-label="Farge ${c}"></button>`).join('')}</div></div>
+    <div><span style="display:block;font-weight:700;margin-bottom:6px" id="icLbl">Ikon</span><div class="icongrid" role="group" aria-labelledby="icLbl">${Object.keys(ICONS).map(k => `<button data-sheet="icon" data-i="${k}" aria-pressed="${l.icon === k}" aria-label="Ikon ${k}">${icon(k)}</button>`).join('')}</div></div>
+    <div class="card row"><span class="chipic" id="lPrev" style="background:${l.color}">${icon(l.icon)}</span><strong class="grow" id="lPrevName">${esc(l.name || 'Forhåndsvisning')}</strong></div>
+    ${isNew ? '' : `<button class="btn wide ${l.archived ? 'primary' : ''}" data-sheet="archive">${l.archived ? 'Hent tilbake fra arkivet' : 'Arkiver etiketten'}</button>
+      <div class="hint">Arkiverte etiketter vises ikke når du fører nye timer, men gamle føringer beholder dem.</div>`}
+    <div class="err" id="lErr" hidden>Gi etiketten et navn.</div>`;
+  const prev = () => { $('#lPrev').style.background = l.color; $('#lPrev').innerHTML = icon(l.icon); $('#lPrevName').textContent = l.name || 'Forhåndsvisning'; };
+  openSheet(isNew ? 'Ny etikett' : 'Endre etikett', body, `<button class="btn primary" data-sheet="save">Lagre</button>`, {
+    on(act, b) {
+      if (act === 'color') { l.color = b.dataset.c; $$('[data-sheet="color"]', sheet).forEach(x => x.setAttribute('aria-pressed', x === b)); prev(); }
+      if (act === 'icon') { l.icon = b.dataset.i; $$('[data-sheet="icon"]', sheet).forEach(x => x.setAttribute('aria-pressed', x === b)); prev(); }
+      if (act === 'archive' || act === 'save') {
+        if (!l.name.trim()) { $('#lErr').hidden = false; return; }
+        if (act === 'archive') l.archived = !l.archived;
+        l.name = l.name.trim();
+        const i = state.labels.findIndex(x => x.id === l.id);
+        if (i >= 0) state.labels[i] = l; else state.labels.push(l);
+        touch('label', l);
+        save(); sheetCtx = null; closeSheet();
+        toast(act === 'archive' ? (l.archived ? 'Etiketten er arkivert' : 'Etiketten er tilbake') : 'Etiketten er lagret');
+      }
+    }
+  });
+  $('#lName').addEventListener('input', e => { l.name = e.target.value; prev(); });
+}
+
+/* ========== Slett med angre ========== */
+function deleteItem(kind, id) {
+  const arr = kind === 'entry' ? state.entries : state.notes;
+  const i = arr.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const [item] = arr.splice(i, 1);
+  tomb(kind, item);
+  save(); render();
+  toast(kind === 'entry' ? 'Føringen er slettet' : 'Notatet er slettet', () => {
+    const list = kind === 'entry' ? state.entries : state.notes; // kan være byttet ut av en synk i mellomtiden
+    if (!list.some(x => x.id === item.id)) list.splice(Math.min(i, list.length), 0, item);
+    touch(kind, item); save(); render();
+  });
+}
+
+/* ========== Sveip ========== */
+function bindSwipe(root) {
+  $$('.swipe', root).forEach(w => {
+    const row = $('.swipe-row', w);
+    let sx = 0, sy = 0, dx = 0, active = false, decided = false;
+    row.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button !== 0) return; sx = e.clientX; sy = e.clientY; dx = 0; active = true; decided = false; });
+    row.addEventListener('pointermove', e => {
+      if (!active) return;
+      const mx = e.clientX - sx, my = e.clientY - sy;
+      if (!decided) {
+        if (Math.abs(mx) > 12 && Math.abs(mx) > Math.abs(my) * 1.3) { decided = true; row.style.transition = 'none'; try { row.setPointerCapture(e.pointerId); } catch (_) {} }
+        else if (Math.abs(my) > 12) { active = false; return; }
+        else return;
+      }
+      dx = Math.min(0, mx);
+      row.style.transform = `translateX(${dx}px)`;
+      w.classList.toggle('armed', dx < -w.offsetWidth * 0.35);
+    });
+    const end = () => {
+      if (!active) return;
+      active = false;
+      if (!decided) return;
+      row.style.transition = '';
+      row.dataset.swiped = '1';
+      setTimeout(() => delete row.dataset.swiped, 80);
+      if (dx < -w.offsetWidth * 0.35) { row.style.transform = 'translateX(-105%)'; setTimeout(() => deleteItem(w.dataset.kind, w.dataset.id), 170); }
+      else row.style.transform = '';
+      w.classList.remove('armed');
+    };
+    row.addEventListener('pointerup', end);
+    row.addEventListener('pointercancel', () => { active = false; row.style.transition = ''; row.style.transform = ''; w.classList.remove('armed'); });
+  });
+}
+
+/* ========== Toast og bekreftelse ========== */
+let toastT;
+function toast(msg, undo) {
+  clearTimeout(toastT);
+  const t = $('#toast');
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button type="button" id="undoBtn">Angre</button>' : ''}`;
+  t.classList.add('show');
+  if (undo) $('#undoBtn').onclick = () => { clearTimeout(toastT); t.classList.remove('show'); undo(); toast('Angret'); };
+  toastT = setTimeout(() => t.classList.remove('show'), undo ? 5000 : 2200);
+}
+function confirmBox(msg, okText, danger) {
+  return new Promise(res => {
+    const m = $('#modal');
+    $('#modalBox').innerHTML = `<p>${msg}</p><div class="row"><button class="btn" id="mNo">Avbryt</button><button class="btn ${danger ? 'danger' : 'primary'}" id="mYes">${okText}</button></div>`;
+    m.classList.add('open');
+    $('#mNo').focus();
+    const done = v => { m.classList.remove('open'); res(v); };
+    $('#mNo').onclick = () => done(false);
+    $('#mYes').onclick = () => done(true);
+  });
+}
+
+/* ========== Eksport / import ========== */
+function download(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+function exportBackup() {
+  state.settings.lastBackup = Date.now();
+  save();
+  const data = { app: 'Timer', format: 1, exported: new Date().toISOString(), entries: state.entries, labels: state.labels, notes: state.notes, settings: state.settings, timer: state.timer };
+  download(`timer-backup-${ymd(today())}.json`, JSON.stringify(data, null, 2), 'application/json');
+  toast('Backup lastet ned');
+  render();
+}
+async function importBackup(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || !Array.isArray(data.entries) || !Array.isArray(data.labels)) throw new Error('format');
+    const ok = await confirmBox(`Backupen inneholder ${data.entries.length} føringer og ${(data.notes || []).length} notater. Vil du erstatte alt som ligger i appen nå?`, 'Erstatt', true);
+    if (!ok) return;
+    const old = state;
+    state = normalize(data);
+    state.sync = old.sync; // behold synk-tilstanden for denne enheten
+    // «Erstatt» skal også gjelde i skyen: det som ikke finnes i backupen slettes, resten sendes opp på nytt
+    [['entry', 'entries'], ['note', 'notes'], ['label', 'labels']].forEach(([kind, key]) => {
+      old[key].filter(r => !state[key].some(x => x.id === r.id)).forEach(r => tomb(kind, r));
+      state[key].forEach(r => touch(kind, r));
+    });
+    touch('settings'); touch('timer');
+    save(); setTheme(); render();
+    toast('Backup lest inn');
+  } catch (e) { toast('Fila kunne ikke leses som en Timer-backup'); }
+}
+const csvCell = v => { v = String(v ?? ''); return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+function exportCsv(scope) {
+  let list, name;
+  if (scope === 'settings') scope = ui.csvScope;
+  if (scope === 'week') {
+    const a = ymd(ui.weekStart), b = ymd(addDays(ui.weekStart, 6)), w = isoWeek(ui.weekStart);
+    list = state.entries.filter(e => e.date >= a && e.date <= b); name = `timer-uke${w.week}-${w.year}.csv`;
+  } else if (scope === 'month') {
+    const [f, l] = monthRange(ui.month.y, ui.month.m).map(ymd);
+    list = state.entries.filter(e => e.date >= f && e.date <= l); name = `timer-${MONTHS_FULL[ui.month.m]}-${ui.month.y}.csv`;
+  } else {
+    const c = (ui.tab === 'settings' ? ui.csvClient : ui.client).toLowerCase();
+    const [a, b] = ui.tab === 'settings' ? periodRange('all') : periodRange(ui.period);
+    list = state.entries.filter(e => (e.client || '').trim().toLowerCase() === c && e.date >= a && e.date <= b);
+    name = `timer-${c.replace(/[^a-z0-9æøå]+/gi, '-').replace(/^-|-$/g, '') || 'kunde'}.csv`;
+  }
+  list = sortEntries(list);
+  if (!list.length) { toast('Ingen timer å eksportere'); return; }
+  const rate = state.settings.rate;
+  const head = ['Dato', 'Ukedag', 'Uke', 'Fra', 'Til', 'Pause (min)', 'Timer', 'Etikett', 'Kunde/prosjekt', 'Notat'].concat(rate ? ['Timepris', 'Beløp'] : []);
+  const rows = list.map(e => {
+    const d = parseYmd(e.date), m = entryMin(e);
+    const r = [pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear(), DAYS[d.getDay()].replace('.', ''), isoWeek(d).week, e.start, e.end, e.pause || 0, fmtDec(m), labelById(e.labelId).name, e.client || '', e.note || ''];
+    if (rate) r.push(rate.toFixed(2).replace('.', ','), (m / 60 * rate).toFixed(2).replace('.', ','));
+    return r;
+  });
+  const tot = list.reduce((s, e) => s + entryMin(e), 0);
+  const sum = ['Sum', '', '', '', '', '', fmtDec(tot), '', '', ''].concat(rate ? ['', (tot / 60 * rate).toFixed(2).replace('.', ',')] : []);
+  const csv = '﻿' + [head, ...rows, sum].map(r => r.map(csvCell).join(';')).join('\r\n');
+  download(name, csv, 'text/csv;charset=utf-8');
+  toast(`CSV lastet ned · ${list.length} føringer`);
+}
+
+/* ========== Skysynk (Supabase) ==========
+   Lokal lagring er alltid førstevalget – appen virker uten nett.
+   Hver føring/notat/etikett er én rad i tabellen timer_records (se supabase.sql).
+   Ved synk: 1) hent alt som er endret i skyen siden sist, 2) send lokale endringer.
+   Ved konflikt vinner den versjonen som sist ble endret (data.updated). */
+
+// Valgfritt: fyll inn her, så slipper man å taste det inn i appen.
+// Publishable/anon-nøkkelen er laget for å ligge i nettleseren – tilgangen styres av RLS i databasen.
+const SUPABASE_URL = 'https://uzshjwtrqcuamxkckaun.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_XS2ROhkU0mA_QJszaf2JTA_vWyp6M-l';
+// Valgfritt: e-post som fylles inn i innloggingen. La stå tom når koden ligger offentlig (GitHub Pages),
+// ellers blir e-postadressen synlig for alle. Telefonens passordlagring fyller den inn uansett.
+const SUPABASE_EMAIL = '';
+const BUILT_IN = !!(SUPABASE_URL && SUPABASE_KEY);
+
+const CLOUD_KEY = 'timer.cloud';
+const cloud = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(CLOUD_KEY) || '{}'); } catch (_) {}
+  // Innebygd oppsett vinner alltid, så Ingrid aldri trenger å taste inn URL eller nøkkel.
+  return BUILT_IN ? { url: SUPABASE_URL.replace(/\/+$/, ''), key: SUPABASE_KEY, session: s.session || null, user: s.user || null, editing: false }
+    : { url: s.url || '', key: s.key || '', session: s.session || null, user: s.user || null, editing: false };
+})();
+function saveCloud() { try { localStorage.setItem(CLOUD_KEY, JSON.stringify({ url: cloud.url, key: cloud.key, session: cloud.session, user: cloud.user })); } catch (_) {} }
+const cloudReady = () => !!(cloud.url && cloud.key && cloud.session && cloud.user);
+
+const arrFor = kind => kind === 'entry' ? state.entries : kind === 'note' ? state.notes : kind === 'label' ? state.labels : null;
+// Marker en endring. For settings/timer trengs ingen post.
+function touch(kind, rec) {
+  const t = Date.now();
+  if (kind === 'settings') state.settings.updated = t;
+  else if (kind === 'timer') state.timerUpdated = t;
+  else { rec.updated = t; if (rec.demo) return; }
+  const k = kind + ':' + (rec ? rec.id : 'main');
+  state.sync.dirty[k] = t;
+  delete state.sync.tombs[k];
+  scheduleSync();
+}
+// Marker en sletting (gravstein), så den også slettes i skyen.
+function tomb(kind, rec) {
+  if (rec.demo) return;
+  const k = kind + ':' + rec.id, t = Date.now();
+  state.sync.tombs[k] = t; state.sync.dirty[k] = t;
+  scheduleSync();
+}
+function markAllDirty() {
+  ['entry', 'note', 'label'].forEach(kind => arrFor(kind).forEach(r => { if (!r.demo) state.sync.dirty[kind + ':' + r.id] = r.updated || r.created || 0; }));
+  state.sync.dirty['settings:main'] = state.settings.updated || 0;
+  if (state.timer || state.timerUpdated) state.sync.dirty['timer:main'] = state.timerUpdated || 0;
+}
+function localUpdated(kind, id) {
+  if (kind === 'settings') return state.settings.updated || 0;
+  if (kind === 'timer') return state.timerUpdated || 0;
+  const r = (arrFor(kind) || []).find(x => x.id === id);
+  return r ? (r.updated || r.created || 0) : 0;
+}
+function applyRemote(row) {
+  const k = row.kind + ':' + row.id, d = row.data || {}, ru = Number(d.updated) || 0;
+  if (state.sync.dirty[k] !== undefined) {
+    const lu = state.sync.tombs[k] || localUpdated(row.kind, row.id);
+    if (lu > ru) return false; // lokal versjon er nyere – den sendes opp etterpå
+  }
+  delete state.sync.dirty[k]; delete state.sync.tombs[k];
+  const arr = arrFor(row.kind);
+  if (arr) {
+    const i = arr.findIndex(x => x.id === row.id);
+    if (row.deleted) { if (i >= 0) arr.splice(i, 1); }
+    else { const rec = { ...d, id: row.id }; delete rec.demo; if (i >= 0) arr[i] = rec; else arr.push(rec); }
+  } else if (row.kind === 'settings' && !row.deleted) {
+    state.settings.rate = d.rate ?? null; state.settings.weekGoal = d.weekGoal ?? null; state.settings.updated = ru;
+  } else if (row.kind === 'timer') {
+    state.timer = row.deleted || !d.startedAt ? null : { startedAt: d.startedAt }; state.timerUpdated = ru;
+  }
+  return true;
+}
+function rowFor(k) {
+  const i = k.indexOf(':'), kind = k.slice(0, i), id = k.slice(i + 1);
+  const base = { user_id: cloud.user.id, kind, id };
+  if (state.sync.tombs[k]) return { ...base, deleted: true, data: { updated: state.sync.tombs[k] } };
+  if (kind === 'settings') return { ...base, deleted: false, data: { rate: state.settings.rate, weekGoal: state.settings.weekGoal, updated: state.settings.updated || 0 } };
+  if (kind === 'timer') return { ...base, deleted: !state.timer, data: { startedAt: state.timer ? state.timer.startedAt : null, updated: state.timerUpdated || 0 } };
+  const r = (arrFor(kind) || []).find(x => x.id === id);
+  if (!r || r.demo) return null;
+  return { ...base, deleted: false, data: { ...r, updated: r.updated || r.created || 0 } };
+}
+
+/* ---- HTTP mot Supabase (Auth + PostgREST), uten bibliotek ---- */
+const authErr = () => Object.assign(new Error('Innloggingen har gått ut'), { auth: true });
+const NO_ERR = [
+  ['invalid login credentials', 'Feil e-post eller passord.'],
+  ['email not confirmed', 'E-posten er ikke bekreftet ennå. Trykk på lenken i e-posten fra Supabase først.'],
+  ['already registered', 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.'],
+  ['password should be', 'Passordet må ha minst 10 tegn, med både bokstaver og tall.'],
+  ['password is known to be weak', 'Passordet er for vanlig. Velg et annet.'],
+  ['database error saving new user', 'Denne e-postadressen har ikke tilgang til appen. Kontakt Thorgeir.'],
+  ['same password', 'Det nye passordet må være forskjellig fra det gamle.'],
+  ['email link is invalid or has expired', 'Lenken er utløpt. Be om en ny.'],
+  ['signups not allowed', 'Det er ikke åpnet for nye kontoer i dette prosjektet.'],
+  ['rate limit', 'For mange forsøk. Vent litt og prøv igjen.'],
+  ['invalid api key', 'Nøkkelen er feil. Sjekk oppsettet.'],
+  ['no api key', 'Nøkkelen mangler. Sjekk oppsettet.']
+];
+const norskFeil = m => { const l = String(m || '').toLowerCase(); const hit = NO_ERR.find(([en]) => l.includes(en)); return hit ? hit[1] : (m || 'Ukjent feil'); };
+async function authCall(path, body) {
+  const res = await fetch(cloud.url + '/auth/v1/' + path, { method: 'POST', headers: { apikey: cloud.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(norskFeil(j.msg || j.error_description || j.message || j.error || 'Feil ' + res.status)), { status: res.status });
+  return j;
+}
+function setSession(j) {
+  cloud.session = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600) };
+  cloud.user = { id: j.user.id, email: j.user.email };
+  saveCloud();
+}
+async function refreshToken() {
+  try { setSession(await authCall('token?grant_type=refresh_token', { refresh_token: cloud.session.refresh_token })); }
+  catch (e) {
+    if (e instanceof TypeError) throw e; // uten nett: behold innloggingen og prøv senere
+    cloud.session = null; saveCloud(); throw authErr();
+  }
+}
+async function api(path, opts = {}, retry = true) {
+  if (!cloud.session) throw authErr();
+  if (cloud.session.expires_at * 1000 - 60000 < Date.now()) await refreshToken();
+  const res = await fetch(cloud.url + path, { ...opts, headers: { apikey: cloud.key, Authorization: 'Bearer ' + cloud.session.access_token, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (res.status === 401 && retry) { await refreshToken(); return api(path, opts, false); }
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    if (j.code === '42P01' || /does not exist|schema cache/i.test(j.message || '')) throw new Error('Fant ikke tabellen timer_records. Har du kjørt supabase.sql?');
+    throw new Error(norskFeil(j.message || 'Feil ' + res.status));
+  }
+  return res;
+}
+
+/* ---- Selve synken ---- */
+const sync$ = { state: 'idle', msg: '' };
+let syncing = false, syncAgain = false, syncTimer = null;
+function pendingCount() { return Object.keys(state.sync.dirty).filter(k => rowFor(k)).length; }
+function syncText() {
+  const n = pendingCount(), venter = n ? ` · ${n} ${n === 1 ? 'endring venter' : 'endringer venter'}` : '';
+  switch (sync$.state) {
+    case 'syncing': return 'Synker …';
+    case 'offline': return 'Uten nett – synker når nettet er tilbake' + venter;
+    case 'auth': return 'Logg inn på nytt for å synke';
+    case 'error': return 'Synk feilet: ' + sync$.msg + venter;
+    default: return state.sync.lastOk ? `Synkronisert ${ymd(new Date(state.sync.lastOk)) === ymd(today()) ? 'kl. ' + fmtClock(state.sync.lastOk) : fmtDate(new Date(state.sync.lastOk))}` + venter : 'Ikke synkronisert ennå' + venter;
+  }
+}
+function setSync(st, msg = '') {
+  sync$.state = st; sync$.msg = msg;
+  $$('[data-syncstatus]').forEach(el => el.textContent = syncText());
+}
+function scheduleSync(ms = 1500) { if (!cloudReady()) return; clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms); }
+async function sync() {
+  if (!cloudReady()) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true; setSync('syncing');
+  let changed = false;
+  try {
+    // 1) Hent det som er endret i skyen siden forrige synk
+    const since = state.sync.lastPull;
+    let offset = 0, last = since;
+    for (;;) {
+      const q = `/rest/v1/timer_records?select=kind,id,data,deleted,synced_at&order=synced_at.asc,kind.asc,id.asc&limit=500&offset=${offset}` + (since ? `&synced_at=gt.${encodeURIComponent(since)}` : '');
+      const rows = await (await api(q)).json();
+      rows.forEach(r => { if (applyRemote(r)) changed = true; });
+      if (rows.length) last = rows[rows.length - 1].synced_at;
+      if (rows.length < 500) break;
+      offset += 500;
+    }
+    state.sync.lastPull = last;
+    // 2) Send lokale endringer
+    const snap = { ...state.sync.dirty };
+    const rows = Object.keys(snap).map(rowFor).filter(Boolean);
+    for (let i = 0; i < rows.length; i += 500) {
+      await api('/rest/v1/timer_records?on_conflict=user_id,kind,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows.slice(i, i + 500)) });
+    }
+    Object.keys(snap).forEach(k => { if (state.sync.dirty[k] === snap[k]) { delete state.sync.dirty[k]; delete state.sync.tombs[k]; } });
+    state.sync.lastOk = Date.now();
+    save();
+    setSync('ok');
+  } catch (e) {
+    save();
+    if (e.auth) { setSync('auth'); if (ui.tab === 'settings' && !sheet.classList.contains('open')) render(); }
+    else if (e instanceof TypeError || navigator.onLine === false) setSync('offline');
+    else setSync('error', e.message);
+  } finally {
+    syncing = false;
+    const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (changed && !sheet.classList.contains('open') && !typing) render();
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  }
+}
+const appUrl = () => location.origin + location.pathname;
+const pwProblem = p => p.length < 10 ? 'Passordet må ha minst 10 tegn.' : !(/[a-zæøå]/i.test(p) && /\d/.test(p)) ? 'Passordet må ha både bokstaver og tall.' : '';
+function afterLogin() {
+  if (state.sync.userId !== cloud.user.id) { state.sync.lastPull = null; state.sync.lastOk = null; state.sync.userId = cloud.user.id; }
+  markAllDirty(); save(); render();
+  sync();
+}
+async function cloudAuth(signup) {
+  const email = $('#cEmail').value.trim(), password = $('#cPass').value, msg = $('#cloudMsg');
+  if (!email || !password) { msg.textContent = 'Skriv inn e-post og passord.'; return; }
+  if (signup && pwProblem(password)) { msg.textContent = pwProblem(password); return; }
+  msg.textContent = signup ? 'Oppretter konto …' : 'Logger inn …';
+  try {
+    const j = signup ? await authCall('signup?redirect_to=' + encodeURIComponent(appUrl()), { email, password })
+      : await authCall('token?grant_type=password', { email, password });
+    if (!j.access_token) { msg.innerHTML = `<strong>Nesten ferdig!</strong> Vi har sendt en e-post til ${esc(email)}. Trykk på lenken i e-posten, så åpnes appen og du er logget inn. Sjekk søppelpost hvis den ikke kommer.`; return; }
+    setSession(j);
+    toast('Innlogget – synker');
+    afterLogin();
+  } catch (e) { msg.textContent = e instanceof TypeError ? 'Fikk ikke kontakt med databasen. Sjekk nettet og prøv igjen.' : e.message; }
+}
+async function forgotPassword() {
+  const email = $('#cEmail').value.trim(), msg = $('#cloudMsg');
+  if (!email) { msg.textContent = 'Skriv inn e-posten din først, og trykk så «Glemt passord».'; return; }
+  msg.textContent = 'Sender …';
+  try { await authCall('recover?redirect_to=' + encodeURIComponent(appUrl()), { email }); }
+  catch (e) { if (e instanceof TypeError) { msg.textContent = 'Fikk ikke kontakt med databasen. Sjekk nettet.'; return; } }
+  msg.textContent = `Hvis ${email} har en konto, får du nå en e-post med en lenke for å lage nytt passord.`;
+}
+function openNewPassword(fromLink) {
+  openSheet('Nytt passord', `
+    <p style="margin:0">${fromLink ? 'Lag et nytt passord for kontoen din.' : 'Skriv inn et nytt passord.'} Minst 10 tegn, med både bokstaver og tall.</p>
+    <div><label class="f" for="npw">Nytt passord</label><input class="inp" id="npw" type="password" autocomplete="new-password"></div>
+    <div><label class="f" for="npw2">Gjenta passordet</label><input class="inp" id="npw2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="npwErr" role="alert"></div>`,
+    `<button class="btn primary" data-sheet="savePw">Lagre passord</button>`, {
+    async on(act) {
+      if (act !== 'savePw') return;
+      const p = $('#npw').value, err = $('#npwErr');
+      if (pwProblem(p)) { err.textContent = pwProblem(p); return; }
+      if (p !== $('#npw2').value) { err.textContent = 'Passordene er ikke like.'; return; }
+      err.textContent = '';
+      try { await api('/auth/v1/user', { method: 'PUT', body: JSON.stringify({ password: p }) }); }
+      catch (e) { err.textContent = e instanceof TypeError ? 'Krever nett. Prøv igjen.' : e.message; return; }
+      sheetCtx = null; closeSheet(); toast('Passordet er lagret');
+    }
+  });
+}
+// Lenker fra e-post (bekreft konto / nytt passord) kommer tilbake med innloggingen i adressen (#access_token=…).
+async function handleAuthRedirect() {
+  if (!location.hash || location.hash.length < 2) return;
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.get('access_token') && !h.get('error')) return;
+  history.replaceState(null, '', appUrl()); // fjern nøkler fra adressefeltet med en gang
+  if (h.get('error')) { toast(h.get('error_code') === 'otp_expired' ? 'Lenken er utløpt. Be om en ny.' : 'Lenken virket ikke. Prøv igjen.'); return; }
+  cloud.session = { access_token: h.get('access_token'), refresh_token: h.get('refresh_token'), expires_at: Number(h.get('expires_at')) || Math.floor(Date.now() / 1000) + (Number(h.get('expires_in')) || 3600) };
+  try {
+    const u = await (await api('/auth/v1/user')).json();
+    cloud.user = { id: u.id, email: u.email }; saveCloud();
+  } catch (e) { cloud.session = null; saveCloud(); toast('Innloggingen fra lenken virket ikke. Logg inn vanlig.'); return; }
+  afterLogin();
+  if (h.get('type') === 'recovery') { ui.tab = 'settings'; render(); openNewPassword(true); }
+  else toast('E-posten er bekreftet. Du er logget inn.');
+}
+function renderCloud() {
+  const head = `<h2 style="margin:0">${UI.cloud} Skysynk</h2>`;
+  if (!BUILT_IN && (!cloud.url || !cloud.key || cloud.editing)) return `<div class="card stack">${head}
+    <p class="muted" style="margin:0">Lagrer en kopi av alt i en Supabase-database, så ingenting går tapt om telefonen tømmes eller byttes ut. Begge feltene finner du i Supabase under Project Settings → API.</p>
+    <div><label class="f" for="cUrl">Prosjekt-URL</label><input class="inp" id="cUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://abcd1234.supabase.co" value="${esc(cloud.url)}"></div>
+    <div><label class="f" for="cKey">Publishable- eller anon-nøkkel</label><input class="inp" id="cKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sb_publishable_… eller eyJ…" value="${esc(cloud.key)}"></div>
+    <div class="hint" id="cloudMsg" role="status"></div>
+    <button class="btn primary wide" data-act="cloudSave">Lagre oppsett</button></div>`;
+  if (!cloudReady()) return `<div class="card stack">${head}
+    <p class="muted" style="margin:0">Logg inn, så tas timene vare på i skyen. <strong style="color:var(--text)">Første gang:</strong> skriv e-post og et nytt passord, og trykk «Opprett konto».</p>
+    <form class="stack" data-submit="cloudLogin" style="gap:14px">
+      <div><label class="f" for="cEmail">E-post</label><input class="inp" id="cEmail" type="email" autocomplete="username" autocapitalize="off" value="${esc(cloud.user ? cloud.user.email : SUPABASE_EMAIL)}"></div>
+      <div><label class="f" for="cPass">Passord</label><input class="inp" id="cPass" type="password" autocomplete="current-password"></div>
+      <div class="hint" id="cloudMsg" role="status" aria-live="polite"></div>
+      <button class="btn primary wide" type="submit">Logg inn</button>
+      <button class="btn wide" type="button" data-act="cloudSignup">Opprett konto</button>
+      <button class="btn ghost wide" type="button" data-act="cloudForgot">Glemt passord</button></form>
+    ${BUILT_IN ? '' : '<button class="btn ghost wide" data-act="cloudEdit">Endre oppsett</button>'}</div>`;
+  return `<div class="card stack">${head}
+    <div class="row"><span class="grow">Innlogget som</span><strong style="overflow-wrap:anywhere">${esc(cloud.user.email)}</strong></div>
+    <p style="margin:0" role="status"><span data-syncstatus>${esc(syncText())}</span></p>
+    <div class="row"><button class="btn primary grow" data-act="cloudSync">Synk nå</button><button class="btn grow" data-act="cloudLogout">Logg ut</button></div>
+    <button class="btn wide" data-act="cloudChangePw">Bytt passord</button>
+    <div class="hint">Endringer synkes automatisk når du har nett. Uten nett lagres alt på telefonen og sendes opp senere.</div>
+    <hr style="border:0;border-top:1px solid var(--line);width:100%;margin:4px 0">
+    <button class="btn wide" data-act="cloudLogoutAll">Logg ut på alle enheter</button>
+    <div class="hint" style="margin-top:-6px">Bruk denne hvis en telefon er mistet eller stjålet.</div>
+    <button class="btn danger wide" data-act="cloudDeleteAll">${UI.trash} Slett alle mine data i skyen</button></div>`;
+}
+
+/* ========== Hendelser ========== */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || sheet.contains(b)) return;
+  if (b.closest('.swipe-row') && b.closest('.swipe-row').dataset.swiped) return;
+  const act = b.dataset.act;
+  switch (act) {
+    case 'tab': ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0); break;
+    case 'view': ui.view = b.dataset.v; render(); break;
+    case 'prevWeek': ui.weekStart = addDays(ui.weekStart, -7); render(); break;
+    case 'nextWeek': ui.weekStart = addDays(ui.weekStart, 7); render(); break;
+    case 'today': ui.weekStart = mondayOf(today()); render(); break;
+    case 'prevMonth': ui.month = { y: new Date(ui.month.y, ui.month.m - 1).getFullYear(), m: new Date(ui.month.y, ui.month.m - 1).getMonth() }; render(); break;
+    case 'nextMonth': ui.month = { y: new Date(ui.month.y, ui.month.m + 1).getFullYear(), m: new Date(ui.month.y, ui.month.m + 1).getMonth() }; render(); break;
+    case 'gotoWeek': ui.weekStart = parseYmd(b.dataset.ws); ui.view = 'week'; render(); window.scrollTo(0, 0); break;
+    case 'period': ui.period = b.dataset.p; render(); break;
+    case 'start': state.timer = { startedAt: Date.now() }; touch('timer'); save(); render(); toast('Klokka går'); break;
+    case 'cloudSave': {
+      const url = $('#cUrl').value.trim().replace(/\/+$/, ''), key = $('#cKey').value.trim();
+      if (!/^https:\/\/[^\s/]+$/.test(url)) { $('#cloudMsg').textContent = 'Prosjekt-URL må se slik ut: https://abcd1234.supabase.co'; break; }
+      if (key.length < 20) { $('#cloudMsg').textContent = 'Lim inn hele nøkkelen fra Supabase.'; break; }
+      cloud.url = url; cloud.key = key; cloud.editing = false; saveCloud(); render(); break;
+    }
+    case 'cloudEdit': cloud.editing = true; render(); break;
+    case 'cloudLogin': case 'cloudSignup': cloudAuth(act === 'cloudSignup'); break;
+    case 'cloudSync': sync(); break;
+    case 'cloudForgot': forgotPassword(); break;
+    case 'cloudChangePw': openNewPassword(false); break;
+    case 'cloudLogout': {
+      if (!(await confirmBox('Logge ut av skysynk? Dataene blir liggende på telefonen, men synkes ikke før du logger inn igjen.', 'Logg ut'))) break;
+      const s = cloud.session; cloud.session = null; saveCloud(); render();
+      fetch(cloud.url + '/auth/v1/logout', { method: 'POST', headers: { apikey: cloud.key, Authorization: 'Bearer ' + s.access_token } }).catch(() => {});
+      break;
+    }
+    case 'cloudLogoutAll': {
+      if (!(await confirmBox('Logge ut på <strong>alle</strong> telefoner og nettlesere? Alle må logge inn på nytt for å synke. Dataene på denne telefonen blir liggende.', 'Logg ut overalt', true))) break;
+      try { await api('/auth/v1/logout?scope=global', { method: 'POST' }); }
+      catch (e) { toast(e instanceof TypeError ? 'Krever nett – prøv igjen når du er på nett' : e.message); break; }
+      cloud.session = null; saveCloud(); render(); toast('Logget ut på alle enheter');
+      break;
+    }
+    case 'cloudDeleteAll': {
+      if (!(await confirmBox('Slette <strong>alle</strong> dine timer, notater og innstillinger i skyen? Det som ligger på denne telefonen blir liggende, men du logges ut overalt. Dette kan ikke angres.', 'Slett i skyen', true))) break;
+      try {
+        await api('/rest/v1/timer_records?user_id=eq.' + encodeURIComponent(cloud.user.id), { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+        await api('/auth/v1/logout?scope=global', { method: 'POST' }).catch(() => {});
+      } catch (e) { toast(e instanceof TypeError ? 'Krever nett – prøv igjen når du er på nett' : e.message); break; }
+      state.sync = { dirty: {}, tombs: {}, lastPull: null, lastOk: null, userId: null };
+      cloud.session = null; save(); saveCloud(); render(); toast('Alle data i skyen er slettet');
+      break;
+    }
+    case 'stop': {
+      const st = new Date(state.timer.startedAt), now = new Date();
+      openEntry({ date: ymd(st), start: fromMin(st.getHours() * 60 + st.getMinutes()), end: fromMin(now.getHours() * 60 + now.getMinutes()), pause: 0, labelId: '', client: '', note: '' }, { fromTimer: true });
+      break;
+    }
+    case 'newEntry': openEntry(newDraft(b.dataset.date)); break;
+    case 'copyLast': {
+      const last = sortEntries(state.entries).pop();
+      if (!last) { toast('Ingen tidligere føringer å kopiere'); break; }
+      openEntry({ date: ymd(today()), start: last.start, end: last.end, pause: last.pause, labelId: state.labels.find(l => l.id === last.labelId && !l.archived) ? last.labelId : '', client: last.client, note: last.note });
+      break;
+    }
+    case 'editEntry': { const en = state.entries.find(x => x.id === b.dataset.id); if (en) openEntry(en); break; }
+    case 'newNote': openNote(null); break;
+    case 'editNote': { const n = state.notes.find(x => x.id === b.dataset.id); if (n) openNote(n); break; }
+    case 'editLabel': openLabel(state.labels.find(l => l.id === b.dataset.id)); break;
+    case 'newLabel': openLabel(null); break;
+    case 'theme': state.settings.theme = b.dataset.v; save(); setTheme(); render(); break;
+    case 'exportBackup': exportBackup(); break;
+    case 'importBackup': $('#importFile').value = ''; $('#importFile').click(); break;
+    case 'csv': exportCsv(b.dataset.scope); break;
+    case 'deleteDemo': {
+      if (!(await confirmBox('Slette alle eksempelføringer og eksempelnotater? Det du har ført selv blir liggende.', 'Slett eksempeldata', true))) break;
+      state.entries = state.entries.filter(x => !x.demo); state.notes = state.notes.filter(x => !x.demo);
+      save(); render(); toast('Eksempeldata er slettet'); break;
+    }
+    case 'loadDemo': addDemo(); save(); render(); toast('Eksempeldata lagt inn'); break;
+    case 'wipeAll': {
+      if (!(await confirmBox(`Slette <strong>alle</strong> føringer, notater og etiketter?${cloudReady() ? ' Dataene slettes også i skyen.' : ''} Dette kan ikke angres. Ta gjerne backup først.`, 'Slett alt', true))) break;
+      const theme = state.settings.theme, old = state;
+      state = freshState(); state.settings.theme = theme; state.sync = old.sync;
+      old.entries.forEach(r => tomb('entry', r)); old.notes.forEach(r => tomb('note', r));
+      old.labels.filter(r => !state.labels.some(x => x.id === r.id)).forEach(r => tomb('label', r));
+      state.labels.forEach(r => touch('label', r)); touch('settings'); touch('timer');
+      save(); render(); toast('Alle data er slettet'); break;
+    }
+  }
+});
+document.addEventListener('change', e => {
+  const k = e.target.dataset && e.target.dataset.change;
+  if (!k) return;
+  const v = e.target.value;
+  if (k === 'client') { ui.client = v; render(); }
+  if (k === 'rate') { state.settings.rate = parseNum(v); touch('settings'); save(); toast(state.settings.rate ? 'Timepris lagret' : 'Timepris fjernet'); }
+  if (k === 'goal') { state.settings.weekGoal = parseNum(v); touch('settings'); save(); toast(state.settings.weekGoal ? 'Ukemål lagret' : 'Ukemål fjernet'); }
+  if (k === 'csvScope') { ui.csvScope = v; render(); }
+  if (k === 'csvClient') { ui.csvClient = v; }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'noteSearch') {
+    ui.search = e.target.value;
+    const pos = e.target.selectionStart;
+    render();
+    const s = $('#noteSearch'); s.focus(); try { s.setSelectionRange(pos, pos); } catch (_) {}
+  }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-submit]');
+  if (!f) return;
+  e.preventDefault();
+  if (f.dataset.submit === 'cloudLogin') cloudAuth(false);
+});
+window.addEventListener('online', () => scheduleSync(200));
+setInterval(() => { if (!document.hidden) scheduleSync(0); }, 60000);
+$('#importFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) importBackup(f); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (!sheet.classList.contains('open')) render(); scheduleSync(200); } });
+
+/* ========== Oppstart ========== */
+load();
+setTheme();
+render();
+handleAuthRedirect().finally(() => scheduleSync(300));
+window.addEventListener('hashchange', handleAuthRedirect);
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { window.__persisted = !!p; if (ui.tab === 'settings') render(); }).catch(() => { window.__persisted = false; });
+} else window.__persisted = false;
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
